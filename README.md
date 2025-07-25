@@ -1,4 +1,4 @@
-# Terraform AWS Infrastructure (lesson-5)
+# Terraform AWS Infrastructure (lesson-7)
 
 ## Структура проєкту
 
