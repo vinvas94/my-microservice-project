@@ -1,14 +1,16 @@
 variable "cluster_name" {
-  description = "EKS-cluster name"
+  description = "Cluster name"
   type        = string
 }
-
+variable "namespace" {
+  description = "Kubernetes namespace for deploying Jenkins"
+  type        = string
+  default     = "jenkins"
+}
 variable "oidc_provider_arn" {
-  description = "ARN EKS OIDC providers for IRSA"
+  description = "OIDC provider ARN from EKS cluster"
   type        = string
 }
-
 variable "oidc_provider_url" {
-  description = "URL EKS OIDC providers"
-  type        = string
+  type = string
 }

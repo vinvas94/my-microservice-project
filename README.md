@@ -1,61 +1,68 @@
-# CI/CD для Django у Kubernetes з Jenkins, Terraform та Argo CD
+# Terraform-модуль RDS/Aurora
 
-Цей проєкт демонструє повний цикл безперервної інтеграції та доставки (CI/CD) для Django-застосунку з використанням **Jenkins**, **Terraform**, **Helm** і **Argo CD**.  
-Мета — забезпечити швидке, стабільне та передбачуване розгортання нових версій застосунку без ручних втручань.
-
----
-
-## Архітектура
-
-- **Terraform** — автоматизоване створення інфраструктури в AWS (VPC, EKS, ECR, S3, DynamoDB).  
-- **Jenkins** — CI-сервер для збирання Docker-образів і оновлення Helm-чартів.  
-- **Docker + Kaniko** — збірка контейнерів без Docker-демона.  
-- **Helm** — управління Kubernetes-ресурсами.  
-- **Argo CD** — GitOps-інструмент для безперервного розгортання.  
+Модуль створює **RDS** або **Aurora** залежно від прапора `use_aurora`.  
+Автоматично піднімає Subnet Group, Security Group і Parameter Group.
 
 ---
 
-## Як розгорнути
+## Приклад використання
 
-### 1. Створити інфраструктуру
-```bash
-cd lesson-8-9
-terraform init
-terraform apply --auto-approve
-```
+```hcl
+module "rds" {
+  source = "./modules/rds"
 
-### 2. Отримати доступ до кластеру EKS
-```bash
-aws eks --region <your-region> update-kubeconfig --name <cluster-name>
-```
+  name                  = "myapp-db"
+  use_aurora            = true
+  aurora_instance_count = 2
 
-### 3. Jenkins та Argo CD
-- URL Jenkins і Argo CD доступні у виводі `terraform output`.
-- Отримати пароль адміністратора:
-```bash
-kubectl get secret -n jenkins jenkins -o jsonpath="{.data.jenkins-admin-password}" | base64 --decode
-kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 --decode
-```
+  engine_cluster            = "aurora-postgresql"
+  engine_version_cluster    = "15.3"
+  parameter_group_family_aurora = "aurora-postgresql15"
+
+  instance_class        = "db.t3.medium"
+  db_name               = "mydb"
+  username              = "admin"
+  password              = "securepassword123"
+
+  vpc_id                = "vpc-123456"
+  subnet_private_ids    = ["subnet-aaa111", "subnet-bbb222"]
+
+  publicly_accessible   = false
+  multi_az              = true
+}
+
+
+## Змінні
+
+| Змінна                                      | Опис                    | Default       |
+| ------------------------------------------- | ----------------------- | ------------- |
+| `use_aurora`                                | Aurora чи RDS           | false         |
+| `name`                                      | Назва інстансу/кластера | ""            |
+| `db_name`                                   | Назва бази              | ""            |
+| `username` / `password`                     | Доступ до БД            | ""            |
+| `instance_class`                            | Клас інстансу           | db.t3.micro   |
+| `engine` / `engine_version`                 | Тип і версія для RDS    | postgres / "" |
+| `engine_cluster` / `engine_version_cluster` | Тип і версія для Aurora | ""            |
+| `vpc_id`                                    | ID VPC                  | ""            |
+| `subnet_private_ids`                        | Приватні сабнети        | []            |
+| `publicly_accessible`                       | Доступ з інтернету      | false         |
+| `multi_az`                                  | Multi-AZ                | false         |
 
 ---
 
-## CI/CD-процес
+## Outputs
 
-1. **Jenkins**:
-   - Клонує код із гілки `lesson-8-9`.
-   - Збирає Docker-образ за допомогою Kaniko.
-   - Публікує образ у ECR.
-   - Оновлює тег образу у Helm-чарті та пушить зміни у Git.
-
-2. **Argo CD**:
-   - Автоматично відслідковує зміни у репозиторії.
-   - Синхронізує стан кластера з Helm-чартом.
-   - Розгортає нову версію застосунку.
+- `rds_endpoint` — кінцева точка БД  
+- `rds_arn` — ARN ресурсу  
+- `security_group_id` — SG БД  
 
 ---
 
-## Видалення інфраструктури
-Щоб уникнути зайвих витрат:
-```bash
-terraform destroy --auto-approve
-```
+## Як змінити тип БД
+
+- **Aurora ↔ RDS:** змініть `use_aurora`  
+- **Тип БД:**  
+  - RDS → `engine` + `engine_version`  
+  - Aurora → `engine_cluster` + `engine_version_cluster`  
+- **Multi-AZ:** `multi_az = true`  
+- **Клас інстансу:** змінити `instance_class`  

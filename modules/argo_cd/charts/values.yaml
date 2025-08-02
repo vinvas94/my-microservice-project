@@ -1,8 +1,28 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: {{ .Release.Name }}-config
-data:
-{{- range $key, $val := .Values.config }}
-  {{ $key }}: {{ $val | quote }}
-{{- end }}
+applications:
+  - name: example-app
+    namespace: default
+    project: default
+    source:
+      repoURL:  https://github.com/vinvas94/sample.git
+      path: django-chart
+      targetRevision: main
+      helm:
+        valueFiles:
+          - values.yaml
+    destination:
+      server: https://kubernetes.default.svc
+      namespace: default
+    syncPolicy:
+      automated:
+        prune: true
+        selfHeal: true
+
+repositories:
+  - name: example-app
+    url: https://github.com/vinvas94/sample.git
+    username: illarionovam
+    password:
+
+repoConfig:
+  insecure: "true"
+  enableLfs: "true"
